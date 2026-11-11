@@ -1,0 +1,33 @@
+app:
+  name: GODSWILL
+  environment: demo          # demo | backtest | live  (live requires explicit override)
+  data_dir: ./data
+  log_level: INFO
+
+database:
+  path: ./data/godswill.db
+
+mt5:
+  # Leave terminal_path as null to AUTO-DETECT any installed/running
+  # MetaTrader 5 terminal on this machine. Works for any broker.
+  #
+  # Set an explicit path only if auto-detection fails, e.g.:
+  #   terminal_path: "C:/Program Files/YourBroker/terminal64.exe"
+  terminal_path: null
+
+  # Optional — if omitted, the Python API uses the account already logged in
+  # in the running MT5 terminal. Only set these if you want the API to log in
+  # programmatically (useful for restart recovery in Phase 10).
+  login: null
+  password: null
+  server: null
+
+  timeout_ms: 60000
+
+risk:
+  risk_per_trade_pct: 0.5
+  max_open_positions: 5
+  max_daily_loss_pct: 2.0
+  max_weekly_loss_pct: 5.0
+  max_drawdown_pct: 15.0
+  min_reward_risk: 1.5

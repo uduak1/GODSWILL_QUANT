@@ -1,0 +1,42 @@
+
+### `PROJECT_STATUS.md`
+
+```markdown
+# PROJECT STATUS
+
+## Current phase: 1 — COMPLETE ✅
+
+| Phase | State |
+|---|---|
+| 1 Architecture & environment | ✅ complete |
+| 2 MT5 market data | ⬜ pending approval |
+| 3 Price-action engine | ⬜ not started |
+| 4 Ten strategies | ⬜ not started |
+| 5 Signal scoring | ⬜ not started |
+| 6 Risk management | ⬜ not started |
+| 7 Backtesting | ⬜ not started |
+| 8 Validation | ⬜ not started |
+| 9 Portfolio | ⬜ not started |
+| 10 MT5 execution | ⬜ not started |
+| 11 Desktop dashboard | ⬜ not started |
+| 12 Audit | ⬜ not started |
+
+## Modules completed
+- configuration (typed pydantic settings, YAML + env overrides)
+- database (SQLite schema v1, connection wrapper, idempotent init)
+- app_logging (rotating file + console)
+- core (enums, dataclasses, interfaces, exceptions)
+- dashboard (minimal Phase-1 window)
+
+## Tests
+`python -m pytest` → 8 tests, 8 passing.
+
+## Known limitations
+- MT5 integration is stubbed — `core.interfaces.IMarketDataProvider` exists but no implementation until Phase 2.
+- Desktop is one window only; full dashboard arrives in Phase 11.
+- No strategy files contain logic yet.
+
+## Next actions (await approval before starting Phase 2)
+1. Approve Phase 1 output.
+2. Approve packaging name `app_logging/` (renamed from `logging/` to avoid stdlib shadowing).
+3. Provide MetaTrader 5 install path + broker details for Phase 2 discovery.

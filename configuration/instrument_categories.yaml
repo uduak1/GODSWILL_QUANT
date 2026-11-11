@@ -1,0 +1,91 @@
+# Category → candidate logical names.
+# The catalog resolves each candidate against the live broker and reports
+# which ones exist. No broker is named here — IC Markets, Pepperstone,
+# Exness, etc. all use one of these conventions for each instrument.
+
+gold:
+  - XAUUSD
+  - GOLD
+
+silver:
+  - XAGUSD
+  - SILVER
+
+oil:
+  - XTIUSD      # WTI crude (IC Markets convention)
+  - USOIL       # WTI (alternative)
+  - WTI
+  - CRUDE
+  - CL
+  - XBRUSD      # Brent crude (IC Markets convention)
+  - UKOIL       # Brent (alternative)
+  - BRENT
+
+forex_majors:
+  - EURUSD
+  - GBPUSD
+  - USDJPY
+  - USDCHF
+  - USDCAD
+  - AUDUSD
+  - NZDUSD
+
+forex_minors:
+  - EURGBP
+  - EURJPY
+  - EURCHF
+  - EURAUD
+  - EURCAD
+  - EURNZD
+  - GBPAUD
+  - GBPCAD
+  - GBPCHF
+  - GBPNZD
+  - GBPJPY
+  - AUDJPY
+  - AUDCAD
+  - AUDCHF
+  - AUDNZD
+  - CADJPY
+  - CADCHF
+  - CHFJPY
+  - NZDJPY
+  - NZDCAD
+  - NZDCHF
+
+forex_exotics:
+  - USDMXN
+  - USDZAR
+  - USDTRY
+  - USDSEK
+  - USDNOK
+  - USDSGD
+  - USDHKD
+  - USDCNH
+  - USDPLN
+  - USDHUF
+
+indices:
+  - US30
+  - US500
+  - US100
+  - NAS100
+  - SPX500
+  - USTEC
+  - GER40
+  - GER30
+  - UK100
+  - JP225
+  - FRA40
+  - AUS200
+  - HK50
+
+crypto:
+  - BTCUSD
+  - ETHUSD
+  - XRPUSD
+  - LTCUSD
+  - BCHUSD
+  - ADAUSD
+  - DOTUSD
+  - SOLUSD

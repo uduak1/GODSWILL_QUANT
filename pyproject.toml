@@ -1,0 +1,41 @@
+[project]
+name = "godswill-quant"
+version = "0.1.0"
+description = "Institutional Multi-Strategy Quantitative Trading Platform"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    "PyYAML>=6.0",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+mt5 = ["MetaTrader5>=5.0.45"]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.4", "mypy>=1.9"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = [
+    "core*", "market_data*", "market_structure*", "liquidity*",
+    "strategies*", "signal_engine*", "scoring*", "risk_management*",
+    "portfolio*", "execution*", "backtesting*", "research*",
+    "analytics*", "database*", "dashboard*", "configuration*",
+    "app_logging*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -m 'not mt5'"
+markers = [
+    "mt5: requires a live MetaTrader 5 terminal connection"
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
