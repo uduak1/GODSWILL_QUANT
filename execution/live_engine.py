@@ -14,6 +14,7 @@ from execution.chart_annotator import ChartAnnotator
 from execution.engine import ExecutionEngine
 from database.connection import Database
 from configuration.settings import Settings
+from research.validation import TIER_RISK
 
 logger = logging.getLogger("godswill.execution.live_engine")
 
@@ -42,15 +43,37 @@ class LiveEngine:
         self._strategies = self._load_strategies()
 
     def _load_strategies(self):
+        from strategies.s01_liquidity_sweep import LiquiditySweepReversal
+        from strategies.s02_bos_fvg import BOSFVGStrategy
         from strategies.s03_choch_reversal import CHOCHReversal
+        from strategies.s04_failed_breakout import FailedBreakoutReversal
         from strategies.s05_supply_demand import SupplyDemand
         from strategies.s06_breakout_retest import BreakoutRetest
         from strategies.s07_trend_continuation import TrendContinuation
+        from strategies.s08_classical_patterns import DoubleTopBottom
+        from strategies.s09_range_reversal import RangeReversal
+        from strategies.s10_multi_structure import MultiStructureConfluence
+        from strategies.s11_ob_mitigation import OBMitigation 
+        from strategies.s12_dxy_ob_confluence import DXYOrderBlockConfluence
+        # --- NEW S13 & S14 IMPORTS ---
+        from strategies.s13_momentum_displacement import MomentumDisplacement
+        from strategies.s14_range_extreme_fade import RangeExtremeFade
+        
         return {
-            "S03": CHOCHReversal(),
-            "S05": SupplyDemand(),
+            "S01": LiquiditySweepReversal(),
+            "S02": BOSFVGStrategy(),
+            "S03": CHOCHReversal(), 
+            "S04": FailedBreakoutReversal(),
+            "S05": SupplyDemand(), 
             "S06": BreakoutRetest(),
-            "S07": TrendContinuation(),
+            "S07": TrendContinuation(), 
+            "S08": DoubleTopBottom(),
+            "S09": RangeReversal(), 
+            "S10": MultiStructureConfluence(),
+            "S11": OBMitigation(),             
+            "S12": DXYOrderBlockConfluence(),
+            "S13": MomentumDisplacement(),  # <--- NEW REGISTRATION
+            "S14": RangeExtremeFade(),      # <--- NEW REGISTRATION
         }
 
     # ------------------------------------------------------------------ #
@@ -160,14 +183,15 @@ class LiveEngine:
             if last_ts is not None and sig.created_at <= last_ts:
                 continue
 
+            # Update memory FIRST so we don't spam the log every second
+            self._last_processed[combo_key] = sig.created_at
+
             if self._in_cooldown(symbol, sig.direction, tf_str):
                 logger.info(
                     f"[COOLDOWN] {symbol} {sig.direction.value} {tf_str} "
                     f"(prev signal within {COOLDOWN_HOURS.get(tf_str, 4)}h)"
                 )
                 continue
-
-            self._last_processed[combo_key] = sig.created_at
 
             logger.info(
                 f"[SIGNAL] {sig.strategy_id} | {sig.symbol} "
@@ -194,23 +218,28 @@ class LiveEngine:
     # ------------------------------------------------------------------ #
 
     def _execute_trade(self, gw, sig: Signal):
-        """Calculate lot size and fire the order."""
+        """Calculate lot size, apply tier risk, and fire the order."""
         try:
             acc = gw.account_info()
             balance = acc["balance"]
             
             specs = gw.symbol_specs(sig.symbol)
             
-            # Calculate exact lot size using the RiskManager
-            volume = self.risk_manager.calculate_volume(balance, sig, specs)
+            # 1. GET TIER MULTIPLIER
+            combo_key = (sig.symbol, sig.timeframe.value, sig.strategy_id)
+            tier_multiplier = TIER_RISK.get(combo_key, 1.0)
+            
+            # 2. PASS TO RISK MANAGER
+            volume = self.risk_manager.calculate_volume(balance, sig, specs, tier_multiplier=tier_multiplier)
             
             if volume <= 0:
                 logger.warning(f"[EXEC] ❌ Trade rejected by RiskManager (volume={volume}) for {sig.symbol}")
                 return
 
-            # Check max open positions
-            # (Simplified for now: just fire the trade)
+            if tier_multiplier < 1.0:
+                 logger.info(f"[EXEC] ⚠️ Applied {tier_multiplier}x Tier Risk to {combo_key}. Adjusted volume: {volume} lots")
             
+            # 3. Fire the trade
             success = self.execution_engine.execute_signal(sig, volume)
             if not success:
                 logger.error(f"[EXEC] ❌ Execution engine failed for {sig.symbol}")

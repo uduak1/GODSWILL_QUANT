@@ -28,11 +28,13 @@ class SupplyDemand(BaseStrategy):
                     
                     if swing.is_high: # Supply Zone
                         sl = entry + (body * 0.5)
-                        tp = entry - (sl - entry) * 2.0
+                        # Reverted to 1:2 R:R as requested
+                        tp = entry - (sl - entry) * 2.0 
                         direction = SignalDirection.SHORT
                     else: # Demand Zone
                         sl = entry - (body * 0.5)
-                        tp = entry + (entry - sl) * 2.0
+                        # Reverted to 1:2 R:R as requested
+                        tp = entry + (entry - sl) * 2.0 
                         direction = SignalDirection.LONG
                         
                     signals.append(Signal(

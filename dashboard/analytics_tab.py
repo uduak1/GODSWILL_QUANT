@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 from market_data.mt5_gateway import MT5Gateway
 from risk_management.engine import RiskManager
 from backtesting.engine import Backtester
+from research.validation import TIER_RISK
 
 logger = logging.getLogger("godswill.dashboard.analytics_tab")
 
@@ -49,7 +50,7 @@ class BacktestWorker(QThread):
     finished = QtSignal(object)
     error = QtSignal(str)
 
-    def __init__(self, gateway: MT5Gateway, portfolio, risk_config, candle_count: int = 3000):
+    def __init__(self, gateway: MT5Gateway, portfolio, risk_config, candle_count: int = 30000):
         super().__init__()
         self.gateway = gateway
         self.portfolio = portfolio
@@ -59,14 +60,37 @@ class BacktestWorker(QThread):
     def run(self):
         try:
             from core.enums import Timeframe
+            from strategies.s01_liquidity_sweep import LiquiditySweepReversal
+            from strategies.s02_bos_fvg import BOSFVGStrategy
             from strategies.s03_choch_reversal import CHOCHReversal
+            from strategies.s04_failed_breakout import FailedBreakoutReversal
             from strategies.s05_supply_demand import SupplyDemand
+            from strategies.s06_breakout_retest import BreakoutRetest
             from strategies.s07_trend_continuation import TrendContinuation
+            from strategies.s08_classical_patterns import DoubleTopBottom
+            from strategies.s09_range_reversal import RangeReversal
+            from strategies.s10_multi_structure import MultiStructureConfluence
+            from strategies.s11_ob_mitigation import OBMitigation
+            from strategies.s12_dxy_ob_confluence import DXYOrderBlockConfluence
+            # --- NEW S13 & S14 IMPORTS ---
+            from strategies.s13_momentum_displacement import MomentumDisplacement
+            from strategies.s14_range_extreme_fade import RangeExtremeFade
 
             strategies = {
+                "S01": LiquiditySweepReversal(),
+                "S02": BOSFVGStrategy(),
                 "S03": CHOCHReversal(),
+                "S04": FailedBreakoutReversal(),
                 "S05": SupplyDemand(),
+                "S06": BreakoutRetest(),
                 "S07": TrendContinuation(),
+                "S08": DoubleTopBottom(),
+                "S09": RangeReversal(),
+                "S10": MultiStructureConfluence(),
+                "S11": OBMitigation(),
+                "S12": DXYOrderBlockConfluence(),
+                "S13": MomentumDisplacement(),  # <--- NEW REGISTRATION
+                "S14": RangeExtremeFade(),      # <--- NEW REGISTRATION
             }
 
             results = []
@@ -89,6 +113,9 @@ class BacktestWorker(QThread):
                     commission = COMMISSIONS.get(symbol, 2.0)
                     slippage = SLIPPAGE.get(symbol, 1.0)
 
+                    combo_key = (symbol, tf_str, strat_id)
+                    tier_multiplier = TIER_RISK.get(combo_key, 1.0)
+
                     rm = RiskManager(self.risk_config)
                     bt = Backtester(
                         strategy, rm,
@@ -96,6 +123,7 @@ class BacktestWorker(QThread):
                         spread_pips=spread,
                         commission_per_lot_roundtrip=commission,
                         slippage_ticks=slippage,
+                        tier_multiplier=tier_multiplier,
                     )
                     res = bt.run(df, symbol, specs, timeframe=tf.value)
 
@@ -135,7 +163,6 @@ class AnalyticsTab(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        # Outer layout holds the scroll area
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
 
@@ -143,14 +170,12 @@ class AnalyticsTab(QWidget):
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: 0; background: #252525; }")
 
-        # Content widget inside the scroll area
         content = QWidget()
         content.setStyleSheet("background: #252525;")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        # Toolbar
         toolbar = QHBoxLayout()
         self.btn_run = QPushButton("Run Portfolio Backtest")
         self.btn_run.setStyleSheet(
@@ -159,7 +184,7 @@ class AnalyticsTab(QWidget):
         )
         self.btn_run.clicked.connect(self._run_backtest)
 
-        self.lbl_status = QLabel("Click 'Run Portfolio Backtest' to analyze all 13 combos.")
+        self.lbl_status = QLabel("Click 'Run Portfolio Backtest' to analyze the active portfolio.")
         self.lbl_status.setStyleSheet("color: #ccc; font-size: 12px; padding-left: 10px;")
 
         toolbar.addWidget(self.btn_run)
@@ -167,7 +192,6 @@ class AnalyticsTab(QWidget):
         toolbar.addStretch()
         layout.addLayout(toolbar)
 
-        # Stats cards row
         self.stats_row = QHBoxLayout()
         self.stat_widgets = {}
         for key, label in [
@@ -196,10 +220,8 @@ class AnalyticsTab(QWidget):
         
         layout.addLayout(self.stats_row)
 
-        # Splitter for Charts vs Table (User can drag the divider)
         splitter = QSplitter(Qt.Vertical)
 
-        # Charts row
         charts_widget = QWidget()
         charts_layout = QHBoxLayout(charts_widget)
         charts_layout.setContentsMargins(0, 0, 0, 0)
@@ -222,7 +244,6 @@ class AnalyticsTab(QWidget):
 
         splitter.addWidget(charts_widget)
 
-        # Strategy Table widget
         table_widget = QWidget()
         table_layout = QVBoxLayout(table_widget)
         table_layout.setContentsMargins(0, 10, 0, 0)
@@ -233,13 +254,10 @@ class AnalyticsTab(QWidget):
             "Symbol", "TF", "Strategy", "Trades", "Win %", "PF", "Max DD %", "Net P&L"
         ])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # Give the table a minimum height so it doesn't shrink to 0
         self.table.setMinimumHeight(250)
         table_layout.addWidget(self.table)
 
         splitter.addWidget(table_widget)
-        
-        # Set initial proportions (60% charts, 40% table)
         splitter.setSizes([500, 300])
 
         layout.addWidget(splitter)
@@ -252,10 +270,10 @@ class AnalyticsTab(QWidget):
             return
         self.btn_run.setEnabled(False)
         self.btn_run.setText("Running...")
-        self.lbl_status.setText("Starting backtest...")
+        self.lbl_status.setText("Starting massive historical backtest...")
 
         from research.validation import FROZEN_PORTFOLIO
-        self._worker = BacktestWorker(self.gateway, FROZEN_PORTFOLIO, self.settings.risk, candle_count=3000)
+        self._worker = BacktestWorker(self.gateway, FROZEN_PORTFOLIO, self.settings.risk, candle_count=30000)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
@@ -284,7 +302,7 @@ class AnalyticsTab(QWidget):
         self._update_stats()
         self._update_table()
 
-        self.lbl_status.setText(f"[OK] Analyzed {len(self._results)} combos on 3000 candles each.")
+        self.lbl_status.setText(f"[OK] Analyzed {len(self._results)} combos on 30,000 candles each.")
         self.lbl_status.setStyleSheet("color: #00FF00; font-size: 12px;")
 
     def _compute_portfolio_curve(self):

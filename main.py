@@ -11,7 +11,7 @@ from app_logging.setup import configure_logging
 from core.enums import Timeframe
 from core.exceptions import MarketDataError, MT5ConnectionError
 
-VERSION = "0.4.4"   # bumped: Global dark theme applied to QApplication
+VERSION = "0.4.4"
 
 
 def _load() -> tuple[Settings, Database, "logging.Logger"]:
@@ -75,11 +75,11 @@ def cmd_run(args):
     """Launch the tabbed PySide6 trading terminal with Settings editor."""
     from PySide6.QtWidgets import QApplication
     from dashboard.main_window import MainWindow
-    from dashboard.theme import apply_dark_theme   # <-- ADDED
+    from dashboard.theme import apply_dark_theme
 
     settings, db, _ = _load()
     app = QApplication(sys.argv)
-    apply_dark_theme(app)                          # <-- ADDED
+    apply_dark_theme(app)
     win = MainWindow(
         settings=settings,
         db=db,
@@ -161,19 +161,34 @@ def _load_strategies():
     from strategies.s01_liquidity_sweep import LiquiditySweepReversal
     from strategies.s02_bos_fvg import BOSFVGStrategy
     from strategies.s03_choch_reversal import CHOCHReversal
-    from strategies.s04_order_block import OrderBlockRetest
+    from strategies.s04_failed_breakout import FailedBreakoutReversal
     from strategies.s05_supply_demand import SupplyDemand
     from strategies.s06_breakout_retest import BreakoutRetest
     from strategies.s07_trend_continuation import TrendContinuation
     from strategies.s08_classical_patterns import DoubleTopBottom
     from strategies.s09_range_reversal import RangeReversal
     from strategies.s10_multi_structure import MultiStructureConfluence
+    from strategies.s11_ob_mitigation import OBMitigation 
+    from strategies.s12_dxy_ob_confluence import DXYOrderBlockConfluence
+    # --- NEW S13 & S14 IMPORTS ---
+    from strategies.s13_momentum_displacement import MomentumDisplacement
+    from strategies.s14_range_extreme_fade import RangeExtremeFade
+    
     return {
-        "S01": LiquiditySweepReversal(), "S02": BOSFVGStrategy(),
-        "S03": CHOCHReversal(), "S04": OrderBlockRetest(),
-        "S05": SupplyDemand(), "S06": BreakoutRetest(),
-        "S07": TrendContinuation(), "S08": DoubleTopBottom(),
-        "S09": RangeReversal(), "S10": MultiStructureConfluence(),
+        "S01": LiquiditySweepReversal(), 
+        "S02": BOSFVGStrategy(),
+        "S03": CHOCHReversal(), 
+        "S04": FailedBreakoutReversal(),
+        "S05": SupplyDemand(), 
+        "S06": BreakoutRetest(),
+        "S07": TrendContinuation(), 
+        "S08": DoubleTopBottom(),
+        "S09": RangeReversal(), 
+        "S10": MultiStructureConfluence(),
+        "S11": OBMitigation(), 
+        "S12": DXYOrderBlockConfluence(),
+        "S13": MomentumDisplacement(),  # <--- NEW REGISTRATION
+        "S14": RangeExtremeFade(),      # <--- NEW REGISTRATION
     }
 
 
@@ -378,6 +393,8 @@ def cmd_validate(args):
 
 def cmd_live(args):
     from execution.live_engine import LiveEngine
+    
+    # --- THIS IMPORT AUTOMATICALLY PULLS YOUR 27 COMBOS ---
     from research.validation import FROZEN_PORTFOLIO
 
     settings, db, _ = _load()
@@ -447,7 +464,7 @@ def main():
     p.add_argument("--strategy", default="S05")
     p.add_argument("--symbol", default="XAUUSD")
     p.add_argument("--timeframe", default="H1")
-    p.add_argument("--count", type=int, default=5000)
+    p.add_argument("--count", type=int, default=50000)
     p.add_argument("--balance", type=float, default=10000.0)
     p.add_argument("--spread", type=float, default=0.0)
     p.add_argument("--fixed-risk", type=float, default=0.0)
@@ -455,8 +472,9 @@ def main():
 
     # scan-all
     p = sub.add_parser("scan-all")
-    p.add_argument("--strategies", default="S01,S02,S03,S04,S05,S06,S07,S08,S09,S10")
-    p.add_argument("--count", type=int, default=3000)
+    # --- UPDATED TO INCLUDE S13, S14 ---
+    p.add_argument("--strategies", default="S01,S02,S03,S04,S05,S06,S07,S08,S09,S10,S11,S12,S13,S14")
+    p.add_argument("--count", type=int, default=50000)
     p.add_argument("--fixed-risk", type=float, default=100.0)
     p.set_defaults(func=cmd_scan_all)
 

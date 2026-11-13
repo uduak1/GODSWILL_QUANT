@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from configuration.settings import Settings, MT5Settings, resolve_config_path
 from market_data.mt5_gateway import MT5Gateway
 from database.connection import Database
+from research.validation import FROZEN_PORTFOLIO # <-- Imported globally for safety
 
 logger = logging.getLogger("godswill.dashboard.main_window")
 
@@ -124,11 +125,11 @@ class MainWindow(QMainWindow):
         )
         v.addWidget(self.lbl_account)
 
-        self.table = QTableWidget(13, 4)
+        # FIX: Dynamically size the table based on the portfolio list
+        self.table = QTableWidget(len(FROZEN_PORTFOLIO), 4)
         self.table.setHorizontalHeaderLabels(["Symbol", "TF", "Strategy", "Status"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        from research.validation import FROZEN_PORTFOLIO
         for i, (sym, tf, sid) in enumerate(FROZEN_PORTFOLIO):
             self.table.setItem(i, 0, QTableWidgetItem(sym))
             self.table.setItem(i, 1, QTableWidgetItem(tf))
